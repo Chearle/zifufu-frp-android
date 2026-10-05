@@ -1,0 +1,154 @@
+name: Android CI
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'frp binaries release tag (optional)'
+        required: false
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout frp-Android repo
+        uses: actions/checkout@v6
+      - name: Checkout frp repo
+        uses: actions/checkout@v6
+        with:
+          repository: fatedier/frp
+          path: frp
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('refs/tags/{0}', github.event.inputs.tag) || '' }}
+      - name: set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;37.0.0 ndk;30.0.14904198'
+      - name: Add build-tools to PATH
+        run: echo "$ANDROID_HOME/build-tools/37.0.0" >> "$GITHUB_PATH"
+      - name: Grant execute permission for build script
+        run: chmod +x scripts/build_frp_binaries.sh
+      - name: Build frp binaries for Android
+        env:
+          NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/30.0.14904198
+          FRP_ROOT: ${{ github.workspace }}/frp
+          FRP_ANDROID_ROOT: ${{ github.workspace }}
+        run: ./scripts/build_frp_binaries.sh
+
+      # https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions#storing-base64-binary-blobs-as-secrets
+      - name: Retrieve the secret and decode it to a file
+        env:
+          STORE_FILE: ${{ secrets.STORE_FILE }}
+        if: env.STORE_FILE != ''
+        run: |
+          echo $STORE_FILE | base64 --decode > keystore.jks
+      - name: Retrieve the key rotation files and decode them to files
+        id: key-rotation-files
+        env:
+          NEW_STORE_FILE: ${{ secrets.NEW_STORE_FILE }}
+          LINEAGE: ${{ secrets.LINEAGE }}
+        if: env.NEW_STORE_FILE != '' && env.LINEAGE != ''
+        run: |
+          echo $NEW_STORE_FILE | base64 --decode > new_keystore.jks
+          echo $LINEAGE | base64 --decode > lineage
+
+      - name: Generate blank keystore.properties to bypass gradle check
+        run: touch keystore.properties
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew assembleRelease
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_FILE: ${{ secrets.STORE_FILE }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+
+      - name: Sign APKs with apksigner (key rotation)
+        if: steps.key-rotation-files.outcome == 'success'
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "Signing apks in app/build/outputs/renamed_apks/release/ with key rotation"
+          ls -la app/build/outputs/renamed_apks/release/
+          # Sanity checks:
+          if [ ! -f keystore.jks ]; then
+            echo "keystore.jks not found" >&2
+            exit 1
+          fi
+          if [ ! -f new_keystore.jks ]; then
+            echo "new_keystore.jks not found" >&2
+            exit 1
+          fi
+          if [ ! -f lineage ]; then
+            echo "lineage file not found" >&2
+            exit 1
+          fi
+
+          # Print apksigner version and path so debugging is easier
+          apksigner --version || echo "apksigner didn't output a version"
+
+          # Make for-loop not expand unmatched globs to literal value (bash only)
+          shopt -s nullglob
+          for apk in app/build/outputs/renamed_apks/release/*.apk; do
+            if [ -z "$apk" ]; then
+              echo "No APKs found to sign, skipping"
+              break
+            fi
+            echo "Signing $apk"
+            apksigner sign \
+              --ks keystore.jks \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass env:STORE_PASSWORD \
+              --key-pass env:KEY_PASSWORD \
+              --next-signer \
+              --ks new_keystore.jks \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass env:STORE_PASSWORD \
+              --key-pass env:KEY_PASSWORD \
+              --lineage lineage \
+              "$apk"
+          done
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: frp-Android-arm64-v8a
+          path: app/build/outputs/renamed_apks/release/frp_arm64-v8a_*.apk
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: frp-Android-armeabi-v7a
+          path: app/build/outputs/renamed_apks/release/frp_armeabi-v7a_*.apk
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: frp-Android-x86_64
+          path: app/build/outputs/renamed_apks/release/frp_x86_64_*.apk
+
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: frp-Android-universal
+          path: app/build/outputs/renamed_apks/release/frp_universal_*.apk
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/renamed_apks/release/*.apk
+          generate_release_notes: true
