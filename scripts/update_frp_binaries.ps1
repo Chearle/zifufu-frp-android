@@ -5,7 +5,7 @@ Download and extract frp release assets then place frpc/frps into Android jniLib
 .DESCRIPTION
 This script downloads the latest frp release (or a specified tag), extracts the architecture-specific
 assets, and copies frpc and frps to the appropriate jniLibs directories, renaming them to
-libfrpc.so and libfrps.so respectively.
+ libzfcore.so and libzfsvc.so respectively.
 
 .PARAMETER Tag
 Specific release tag to fetch. If omitted, this script uses the latest release.
@@ -204,8 +204,8 @@ function Process-Asset([string]$pattern, [string]$abiDir) {
     $destDir = Join-Path $DestBase $abiDir
     if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
 
-    $outFrpc = Join-Path $destDir 'libfrpc.so'
-    $outFrps = Join-Path $destDir 'libfrps.so'
+    $outFrpc = Join-Path $destDir 'libzfcore.so'
+    $outFrps = Join-Path $destDir 'libzfsvc.so'
 
     try {
         Copy-Item -Path $frpc.FullName -Destination $outFrpc -Force

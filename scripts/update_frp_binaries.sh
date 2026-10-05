@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # update_frp_binaries.sh
 # Downloads the latest frp release (or a specified tag), extracts required three arch tarballs,
-# and places frps & frpc executables into the jniLibs directories with names libfrps.so and libfrpc.so
+# and places frps & frpc executables into the jniLibs directories with names libzfsvc.so and libzfcore.so
 # Usage:
 #   ./scripts/update_frp_binaries.sh [--tag <TAG>] [--dest <DEST_BASE>] [--dry-run] [--token <GH_TOKEN>]
 
@@ -26,7 +26,7 @@ usage() {
 Usage: $0 [--tag <TAG>] [--dest <DEST_BASE>] [--dry-run] [--token <GH_TOKEN>]
 
 Downloads the latest frp release (or provided tag), extracts three asset tarballs and
-copies the frpc and frps binaries into Android JNI libs directories as libfrpc.so and libfrps.so
+copies the frpc and frps binaries into Android JNI libs directories as libzfcore.so and libzfsvc.so
 Mapping (default):
   frp_*_android_arm64.tar.gz -> ${DEST_BASE}/arm64-v8a
   frp_*_linux_amd64.tar.gz -> ${DEST_BASE}/x86_64
@@ -158,7 +158,7 @@ process_asset() {
     asset_name=$(jq -r --arg s "${pattern}" '.assets[] | select(.name | test($s)) | .name' <<<"${release_json}" | head -n 1)
     log "DRY RUN: Would download asset: ${asset_name}"
     log "DRY RUN: Asset URL: ${asset_url}"
-    log "DRY RUN: Would extract frpc & frps and place into ${DEST_BASE}/${abi_dir} as libfrpc.so and libfrps.so"
+    log "DRY RUN: Would extract frpc & frps and place into ${DEST_BASE}/${abi_dir} as libzfcore.so and libzfsvc.so"
     return 0
   else
     # Get file list
@@ -219,8 +219,8 @@ process_asset() {
     fi
 
     # Write to the dest with required names
-    out_frpc="${dest_dir}/libfrpc.so"
-    out_frps="${dest_dir}/libfrps.so"
+    out_frpc="${dest_dir}/libzfcore.so"
+    out_frps="${dest_dir}/libzfsvc.so"
 
     log "Copying ${src_frpc} -> ${out_frpc}"
     cp -f "${src_frpc}" "${out_frpc}"

@@ -30,7 +30,7 @@ Script `update_frp_binaries.sh` fetches the latest release of [fatedier/frp](htt
 - `linux_amd64`   -> `app/src/main/jniLibs/x86_64/`
 - `linux_arm`     -> `app/src/main/jniLibs/armeabi-v7a/`
 
-Files will be copied as `libfrpc.so` and `libfrps.so` in the target directories (executable bit preserved).
+Files will be copied as `libzfcore.so` and `libzfsvc.so` in the target directories (executable bit preserved).
 
 Prerequisites
 - `curl`, `jq`, `tar` and `bash` must be available on your system.

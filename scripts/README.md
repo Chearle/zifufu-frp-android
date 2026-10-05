@@ -30,7 +30,7 @@ export FRP_ANDROID_ROOT=/path/to/github/frp-Android
 - `linux_amd64`   -> `app/src/main/jniLibs/x86_64/`
 - `linux_arm`     -> `app/src/main/jniLibs/armeabi-v7a/`
 
-提取的文件会被复制为 `libfrpc.so` 与 `libfrps.so`，并保留可执行权限（即 `chmod +x`）。
+提取的文件会被复制为 `libzfcore.so` 与 `libzfsvc.so`，并保留可执行权限（即 `chmod +x`）。
 
 先决条件
 - 系统需安装 `curl`、`jq`、`tar` 和 `bash`。
