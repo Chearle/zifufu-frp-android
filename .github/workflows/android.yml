@@ -1,5 +1,9 @@
 name: Android CI
 
+# 推送 v* 标签时需要创建 Release，默认的 GITHUB_TOKEN 是只读的，必须显式申请写权限
+permissions:
+  contents: write
+
 on:
   push:
   workflow_dispatch:
