@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="icon.png" width="130" alt="紫芙FRP" />
+<img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="130" alt="紫芙FRP" />
 
 # 紫芙 FRP
 
